@@ -128,18 +128,22 @@ console.log(Object.isFrozen(frozen)); // true
 
 ## Типичные ошибки
 
-- Думать, что в `defineProperty` пропущенные флаги остаются `true`: у нового свойства они `false`.
-- Не заметить, что запись в `writable: false` в обычном режиме молча не срабатывает.
-- Рассчитывать, что `Object.freeze` защищает вложенные объекты.
-- Пытаться «вернуть» `configurable: true`: это невозможно.
+> [!WARNING]
+>
+> - Думать, что в `defineProperty` пропущенные флаги остаются `true`: у нового свойства они `false`.
+> - Не заметить, что запись в `writable: false` в обычном режиме молча не срабатывает.
+> - Рассчитывать, что `Object.freeze` защищает вложенные объекты.
+> - Пытаться «вернуть» `configurable: true`: это невозможно.
 
 ## Коротко
 
-- Флаги свойства: `writable`, `enumerable`, `configurable`; по умолчанию для обычных свойств все `true`, для `defineProperty` — `false`.
-- `getOwnPropertyDescriptor(s)` читает, `defineProperty/-ies` пишет.
-- Нарушение `writable: false` в строгом режиме — `TypeError`, в обычном — тишина.
-- `configurable: false` необратим (кроме перевода `writable` в `false`).
-- `preventExtensions`, `seal`, `freeze` ограничивают объект целиком; заморозка поверхностная.
+> [!TIP]
+>
+> - Флаги свойства: `writable`, `enumerable`, `configurable`; по умолчанию для обычных свойств все `true`, для `defineProperty` — `false`.
+> - `getOwnPropertyDescriptor(s)` читает, `defineProperty/-ies` пишет.
+> - Нарушение `writable: false` в строгом режиме — `TypeError`, в обычном — тишина.
+> - `configurable: false` необратим (кроме перевода `writable` в `false`).
+> - `preventExtensions`, `seal`, `freeze` ограничивают объект целиком; заморозка поверхностная.
 
 ---
 
