@@ -1,0 +1,16 @@
+Dolphy courses
+==============
+
+The course "JavaScript: language" (javascript/) follows the structure and topics
+of the "Modern JavaScript Tutorial" (https://javascript.info, Russian edition:
+https://learn.javascript.ru, source: https://github.com/javascript-tutorial/ru.javascript.info)
+by Ilya Kantor, part "The JavaScript language".
+
+The lesson texts, quiz questions, coding tasks and tests were rewritten for the Dolphy
+format; the material was changed and adapted. The original tutorial is licensed by
+its author under terms that are basically CC BY-NC (attribution, non-commercial use only):
+https://github.com/javascript-tutorial/ru.javascript.info/blob/master/LICENSE.md
+
+Accordingly, this repository is distributed under CC BY-NC 4.0 (see LICENSE).
+It is NOT endorsed by the author of the original tutorial. Any commercial use
+requires permission from the original author.

@@ -1,0 +1,13 @@
+{
+  "dependencies": [],
+  "description": "Язык JavaScript с нуля: основы, функции, объекты, прототипы и классы, ошибки, асинхронность, генераторы и модули. Уроки с разбором, тесты на выбор ответа и задачи, которые проверяются запуском кода.",
+  "engine": {
+    "requiresChecks": true,
+    "tags": ["javascript"]
+  },
+  "generator_config": {
+    "KnowledgeBase": {}
+  },
+  "id": "javascript",
+  "name": "JavaScript: язык"
+}

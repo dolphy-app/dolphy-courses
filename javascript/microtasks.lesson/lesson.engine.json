@@ -1,0 +1,8 @@
+{
+  "tags": [
+    "async",
+    "microtasks"
+  ],
+  "bloom": "analyze",
+  "dok": 2
+}
