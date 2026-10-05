@@ -77,21 +77,37 @@ jobs:
       - name: Validate courses and run reference solutions
         working-directory: dolphy
         run: |
-          status=0
-          pnpm -s -F @dolphy-app/engine engine-cli validate "$GITHUB_WORKSPACE/courses" \
-            --run-checks --extensions "$RUNNER_TEMP/extensions" --json \
-            > "$RUNNER_TEMP/report.json" || status=$?
+          report="$RUNNER_TEMP/report.json"
 
-          # engine-cli exits 0 on warnings (e.g. an exercise type that no extension
-          # provides), so they are turned into failures here.
-          jq -r '.diagnostics[] |
-            (if .severity == "error" then "error" else "warning" end) as $level |
-            "::\($level) file=\(.path // ""),line=\(.line // 1),title=\(.code)::\(.unitId // "-"): \(.message | gsub("\n"; "%0A"))"' \
-            "$RUNNER_TEMP/report.json"
-          jq -r '"errors: \(.summary.errors), warnings: \(.summary.warnings); reference solutions: \(.referenceChecks.checked) checked, \(.referenceChecks.failed) failed, \(.referenceChecks.skipped) skipped"' \
-            "$RUNNER_TEMP/report.json"
+          validate() {
+            local status=0
+            pnpm -s -F @dolphy-app/engine engine-cli validate "$GITHUB_WORKSPACE/courses" \
+              --run-checks --extensions "$RUNNER_TEMP/extensions" --json \
+              > "$report" || status=$?
 
-          jq -e '.summary.errors == 0 and .summary.warnings == 0
-            and .referenceChecks.failed == 0 and .referenceChecks.checked > 0' \
-            "$RUNNER_TEMP/report.json" > /dev/null || status=1
-          exit "$status"
+            # engine-cli exits 0 on warnings (e.g. an exercise type that no extension
+            # provides), so they are turned into failures here.
+            jq -r '.diagnostics[] |
+              (if .severity == "error" then "error" else "warning" end) as $level |
+              (if .path then "file=\(.path),line=\(.line // 1)," else "" end) as $where |
+              "::\($level) \($where)title=\(.code)::\(.unitId // "-"): \(.message | gsub("\n"; "%0A"))"' \
+              "$report"
+            jq -r '"errors: \(.summary.errors), warnings: \(.summary.warnings); reference solutions: \(.referenceChecks.checked) checked, \(.referenceChecks.failed) failed, \(.referenceChecks.skipped) skipped"' \
+              "$report"
+
+            jq -e '.summary.errors == 0 and .summary.warnings == 0
+              and .referenceChecks.failed == 0 and .referenceChecks.checked > 0' \
+              "$report" > /dev/null || status=1
+            return "$status"
+          }
+
+          validate && exit 0
+          # A check worker occasionally dies on a loaded runner; that says nothing
+          # about the course. Retry once, and only in that case: real course errors
+          # are deterministic and fail again.
+          if jq -e 'any(.diagnostics[]; .message | contains("worker_crash"))' "$report" > /dev/null; then
+            echo "A check worker crashed; retrying once"
+            validate
+          else
+            exit 1
+          fi
