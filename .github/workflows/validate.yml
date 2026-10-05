@@ -1,0 +1,97 @@
+name: Validate courses
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dolphy-ref:
+        description: Tag, branch or commit of dolphy-app/dolphy whose engine-cli validates the courses
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Ref of dolphy-app/dolphy that provides engine-cli and the exercise-type
+  # extensions. The `dolphy.js` exercise type is not in any release yet, so this
+  # follows `develop`; pin it to a release tag (vX.Y.Z) once one includes
+  # packages/ext-js.
+  DOLPHY_REF: develop
+
+jobs:
+  validate:
+    name: Validate courses
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout courses
+        uses: actions/checkout@v7
+        with:
+          path: courses
+          persist-credentials: false
+
+      - name: Checkout Dolphy
+        uses: actions/checkout@v7
+        with:
+          repository: dolphy-app/dolphy
+          ref: ${{ inputs.dolphy-ref || env.DOLPHY_REF }}
+          path: dolphy
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: dolphy/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: dolphy/.nvmrc
+          cache: pnpm
+          cache-dependency-path: dolphy/pnpm-lock.yaml
+
+      - name: Install engine and exercise-type extensions
+        working-directory: dolphy
+        run: >
+          pnpm install --frozen-lockfile
+          --filter '@dolphy-app/engine...'
+          --filter '@dolphy-app/extension-tools...'
+          --filter './packages/ext-*...'
+
+      - name: Build exercise-type extensions
+        working-directory: dolphy
+        run: |
+          pnpm --filter './packages/ext-*' build
+          mkdir -p "$RUNNER_TEMP/extensions"
+          cp -R packages/ext-*/dist-ext/* "$RUNNER_TEMP/extensions/"
+          ls "$RUNNER_TEMP/extensions"
+
+      - name: Validate courses and run reference solutions
+        working-directory: dolphy
+        run: |
+          status=0
+          pnpm -s -F @dolphy-app/engine engine-cli validate "$GITHUB_WORKSPACE/courses" \
+            --run-checks --extensions "$RUNNER_TEMP/extensions" --json \
+            > "$RUNNER_TEMP/report.json" || status=$?
+
+          # engine-cli exits 0 on warnings (e.g. an exercise type that no extension
+          # provides), so they are turned into failures here.
+          jq -r '.diagnostics[] |
+            (if .severity == "error" then "error" else "warning" end) as $level |
+            "::\($level) file=\(.path // ""),line=\(.line // 1),title=\(.code)::\(.unitId // "-"): \(.message | gsub("\n"; "%0A"))"' \
+            "$RUNNER_TEMP/report.json"
+          jq -r '"errors: \(.summary.errors), warnings: \(.summary.warnings); reference solutions: \(.referenceChecks.checked) checked, \(.referenceChecks.failed) failed, \(.referenceChecks.skipped) skipped"' \
+            "$RUNNER_TEMP/report.json"
+
+          jq -e '.summary.errors == 0 and .summary.warnings == 0
+            and .referenceChecks.failed == 0 and .referenceChecks.checked > 0' \
+            "$RUNNER_TEMP/report.json" > /dev/null || status=1
+          exit "$status"

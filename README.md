@@ -25,6 +25,12 @@ With the monorepo of Dolphy checked out:
 pnpm -F @dolphy-app/engine engine-cli validate <path-to-this-repo> --run-checks --extensions <dolphy>/apps/desktop/extensions
 ```
 
+CI (`.github/workflows/validate.yml`) does the same on every push and pull request to `main`: it builds `engine-cli` and
+the exercise-type extensions from [dolphy-app/dolphy](https://github.com/dolphy-app/dolphy), validates every course and
+runs every reference solution. Any error, any warning (for example an exercise type that no extension provides) or a
+failing reference solution fails the check; problems are annotated on the offending file and line. The workflow can be
+started by hand with a different `dolphy-ref` (tag, branch or commit).
+
 ## Exercise format (short)
 
 `dolphy.js` exercises keep the tests and the reference solution inside the exercise front matter, so a course works
